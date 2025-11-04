@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Slot Game - White Spin Wheel</title>
+
+  <style>
+    /* خطوط */
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&family=Orbitron:wght@500;700&display=swap');
+
+    :root{
+      --tile: 18vmin;
+      --spin-size: clamp(64px, 14vmin, 120px);
+      --step-size: clamp(48px, 10vmin, 80px);
+      --gap: 2.2vmin;
+
+      --gold-dk:#7a4f02; --gold:#e3b653; --gold-hi:#ffe69a;
+      --hud-stroke:rgba(255,215,120,.58);
+      --led-amber:#ffd66d;
+
+      --slot-w: calc(var(--tile) * 5);
+      --slot-h: calc(var(--tile) * 3);
+
+      --radius-lg: clamp(12px, 2.2vmin, 24px);
+      --radius-md: clamp(10px, 1.8vmin, 16px);
+      --inset: clamp(8px, 1.2vmin, 12px);
+    }
+
+    *{margin:0;padding:0;box-sizing:border-box}
+    html,body{height:100%}
+
+    /* ===== BACKGROUND ===== */
+    body{
+      min-height:100svh;
+      display:flex; flex-direction:column; align-items:center;
+      padding:clamp(10px,2vmin,24px);
+      color:#fff;
+      overflow:hidden;
+      background: url("images/background.png") no-repeat center center fixed;
+      background-size: cover;
+    }
+
+    /* ===== عنوان اللعبة (خارج المكنة) ===== */
+    /* 🎯 عنوان اللعبة بلون ذهبي واضح تمامًا بدون أي غبش */
+/* 🎯 عنوان اللعبة بلون ذهبي أصفر واضح */
+.machine-title {
+  position: relative;
+  display: block;
+  text-align: center;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: clamp(36px, 5vmin, 68px);
+  letter-spacing: 2px;
+
+  /* 💛 التدرج الذهبي الأصفر */
+  background: linear-gradient(180deg, #fff8b0 0%, #ffd84a 45%, #c89d00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+
+  /* ✨ لمعة خفيفة بدون أي غبش */
+  text-shadow:
+    0 0 10px rgba(255, 230, 120, 0.8),
+    0 2px 4px rgba(0, 0, 0, 0.6);
+
+  margin-top: 70px;
+  margin-bottom: 12px;
+  z-index: 9999;
+  pointer-events: none;
+  filter: none;
+  opacity: 1;
+}
+
+
+
+    /* على الكمبيوتر نضبط الحجم والمسافة */
+    @media (min-width: 1024px) and (pointer:fine) {
+      .machine-title {
+        font-size: clamp(36px, 3.8vmin, 58px);
+        margin-top: calc(60px + env(safe-area-inset-top, 0px));
+      }
+    }
+
+    /* ===== HUD ===== */
+    .top-hud{
+      position:fixed; left:50%; top:calc(8px + env(safe-area-inset-top, 0px));
+      transform:translateX(-50%); z-index:10010;
+      display:flex; align-items:center; gap:1.2vmin;
+      padding:.8vmin 1.2vmin; border-radius:12px;
+      background:rgba(20,20,24,.35);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow: 0 .8vmin 2vmin rgba(0,0,0,.35), inset 0 0 3vmin rgba(255,215,120,.08);
+    }
+    .top-hud .label{
+      font:800 clamp(11px,1.8vmin,13px)/1 "Cairo",system-ui,sans-serif;
+      color:var(--gold-hi); opacity:.95;
+    }
+    #creditsTop{
+      min-width: clamp(86px, 15vmin, 140px);
+      text-align:center; padding:.6vmin 1vmin; border-radius:10px;
+      font-family:"Orbitron",system-ui,sans-serif; font-weight:700;
+      font-variant-numeric: tabular-nums;
+      font-size: clamp(16px, 2.6vmin, 24px); letter-spacing:.5px;
+      color:var(--led-amber);
+      background:linear-gradient(180deg, rgba(12,16,22,.35), rgba(6,8,12,.2));
+      border:1px solid rgba(255,178,0,.35);
+      text-shadow:0 0 .6vmin rgba(255,178,0,.75),0 .1vmin 0 #2a1500;
+    }
+    .win-badge{
+      display:inline-flex; align-items:center; justify-content:center;
+      min-width: clamp(70px, 16vmin, 160px);
+      height: clamp(32px, 6.4vmin, 48px);
+      padding: .4vmin .9vmin; border-radius:10px;
+      font-family:"Orbitron",system-ui,sans-serif; font-weight:700;
+      font-variant-numeric: tabular-nums;
+      font-size: clamp(14px, 2.4vmin, 20px);
+      color:var(--led-amber);
+      background:linear-gradient(180deg, rgba(12,16,22,.45), rgba(6,8,12,.28));
+      border:1px solid rgba(255,178,0,.35);
+      text-shadow:0 0 .6vmin rgba(255,178,0,.75),0 .1vmin 0 #2a1500;
+      opacity:0; transform: translateY(-6px) scale(.92);
+      pointer-events:none;
+    }
+    .win-badge.show{ animation: badgePop 1.6s cubic-bezier(.22,1,.36,1) forwards; }
+    @keyframes badgePop{
+      0%{ opacity:0; transform: translateY(-6px) scale(.92) }
+      10%{ opacity:1; transform: translateY(0) scale(1) }
+      80%{ opacity:1; transform: translateY(0) scale(1) }
+      100%{ opacity:0; transform: translateY(-4px) scale(.96) }
+    }
+    .credits-pulse{ animation: creditsPulse .9s ease; }
+    @keyframes creditsPulse{
+      0%{ box-shadow: 0 0 .6vmin rgba(255,178,0,.9), 0 0 1.2vmin rgba(255,178,0,.6) }
+      100%{ box-shadow: 0 0 0 rgba(0,0,0,0) }
+    }
+
+    /* ===== MACHINE ===== */
+    .machine-frame {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      padding: clamp(18px, 3vmin, 36px);
+      border-radius: 20px;
+      background: linear-gradient(180deg, #8b3f00 0%, #4e2200 100%);
+      border: 6px solid #d4a741;
+      box-shadow:
+        0 10px 25px rgba(0, 0, 0, 0.9),
+        inset 0 0 8px rgba(255, 220, 150, 0.4),
+        inset 0 0 30px rgba(255, 180, 60, 0.3);
+      position: relative;
+      /* لم نعد نحتاج مسافة كبيرة من أعلى الصفحة لأن العنوان صار قبلها */
+      margin-top: 12px;
+    }
+
+    .slot-container{
+      width:var(--slot-w); height:var(--slot-h);
+      position:relative; overflow:hidden; border-radius:var(--radius-md);
+      background:#000;
+      box-shadow: 0 0 0 .12vmin rgba(0,0,0,.6) inset, 0 0 0 1vmin rgba(0,0,0,.6) inset;
+      transform: translateZ(0);
+    }
+    .slot-container::before{
+      content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:2;
+      box-shadow:
+        inset 0 0 0 .6vmin var(--gold-dk),
+        inset 0 0 0 .9vmin var(--gold),
+        inset 0 0 0 1.2vmin var(--gold-dk),
+        inset 0 0 4vmin rgba(255,215,0,.18);
+    }
+    .slot-container::after{
+      content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:1;
+      box-shadow: inset 0 0 3vmin rgba(0,0,0,.55);
+    }
+
+    .reels{display:flex; width:100%; height:100%}
+    .reel{flex:1; overflow:hidden; position:relative}
+    .reel:not(:first-child)::before{
+      content:""; position:absolute; top:var(--inset); bottom:var(--inset); left:-.2vmin; width:.5vmin; border-radius:.4vمن; z-index:2;
+      background:linear-gradient(180deg, var(--gold-hi), var(--gold) 50%, var(--gold-dk));
+      box-shadow:0 0 1.2vmin rgba(255,215,0,.25), inset 0 0 .4vmin rgba(0,0,0,.35);
+      pointer-events:none;
+    }
+
+    .reel-inner{position:relative; width:100%; will-change:transform}
+    .symbol{ width:100%; height:var(--tile); position:absolute; left:0; transform:none; }
+    .symbol-img{
+      width:100%; height:100%;
+      background-size:100% 100%;
+      background-position:center; background-repeat:no-repeat;
+      image-rendering:-webkit-optimize-contrast;
+    }
+
+    .symbol-img.win-flash{position:relative;animation:superFlash 2.5s infinite ease-in-out;z-index:3}
+    @keyframes superFlash{
+      0%{transform:scale(1);filter:hue-rotate(0deg)}
+      25%{transform:scale(1.08);filter:hue-rotate(90deg)}
+      50%{transform:scale(1);filter:hue-rotate(180deg)}
+      75%{transform:scale(1.08);filter:hue-rotate(270deg)}
+      100%{transform:scale(1);filter:hue-rotate(360deg)}
+    }
+
+    /* الدوران */
+    @keyframes spinDown{
+      0%   { transform: translateY(calc(var(--tile) * -21)); }
+      10%  { transform: translateY(calc(var(--tile) * -19)); }
+      70%  { transform: translateY(calc(var(--tile) * -13.5)); }
+      88%  { transform: translateY(calc(var(--tile) * -12.25)); }
+      94%  { transform: translateY(calc(var(--tile) * -11.8)); }
+      100% { transform: translateY(calc(var(--tile) * -12)); }
+    }
+
+    /* ===== SPIN ROW ===== */
+    .spin-row{ width:100%; display:flex; justify-content:center; margin-top:var(--gap); }
+    .spin-row-inner{ width:var(--slot-w); display:flex; align-items:center; justify-content:center; gap:var(--gap); }
+
+    .step-btn, #spinBtn, #moreBtn{ touch-action:manipulation; }
+    .step-btn{
+      width:var(--step-size); height:var(--step-size);
+      border-radius:50%; border:1.5px solid var(--hud-stroke);
+      background:linear-gradient(180deg,#1e252d,#0b0f15);
+      box-shadow: 0 .8vmin 2vmin rgba(0,0,0,.35), inset 0 0 3vmin rgba(255,215,120,.08);
+      color:#fff; font-size:clamp(22px,4.8vmin,30px); line-height:1; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; user-select:none;
+    }
+    .step-btn:active{transform:scale(.95)}
+    #spinBtn{
+      width:var(--spin-size); height:var(--spin-size); background:none; border:none; cursor:pointer; padding:0;
+      filter:drop-shadow(0 0 .6vmin rgba(0,0,0,.55));
+    }
+    #spinBtn img{width:100%;height:100%;display:block;object-fit:contain;animation:wheelMotion 3s infinite linear;filter:drop-shadow(0 0 1vmin rgba(255,255,255,.85))}
+    #spinBtn:active img{animation-play-state:paused;transform:scale(.86)}
+    @keyframes wheelMotion{0%{transform:rotate(0)}50%{transform:rotate(180deg)}100%{transform:rotate(360deg)}}
+
+    #moreBtn{
+      width: clamp(44px, 8.5vmin, 64px); height: clamp(44px, 8.5vmin, 64px);
+      border-radius:12px; border:1.5px solid var(--hud-stroke);
+      background:linear-gradient(180deg,#1e252d,#0b0f15); color:#fff; font-size:clamp(20px,4.2vmin,26px);
+      display:flex; align-items:center; justify-content:center;
+    }
+
+    /* ===== Bottom sheet ===== */
+    .sheet{
+      position:fixed; left:50%; transform:translateX(-50%) translateY(100%);
+      bottom:0; width:min(96vw, 520px);
+      background:rgba(18,20,24,.96); color:#fff; border-radius:16px 16px 0 0;
+      border:1px solid rgba(255,255,255,.12); padding:16px; z-index:10020;
+      box-shadow:0 -10px 40px rgba(0,0,0,.5);
+      transition:transform .28s ease;
+    }
+    .sheet.open{ transform:translateX(-50%) translateY(0) }
+    .sheet header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .sheet h3{font:800 16px/1 "Cairo",system-ui,sans-serif}
+    .sheet .close{background:none;border:none;color:#fff;font-size:24px;cursor:pointer}
+
+    .sheet .row{display:flex;gap:10px;align-items:center;margin:10px 0;flex-wrap:wrap}
+    .sheet .row .info{
+      padding:10px 12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02)),linear-gradient(180deg,#13171d,#0a0d11 60%,#07090c);
+      border:1.5px solid var(--hud-stroke);display:flex;align-items:center;gap:10px
+    }
+    .sheet label{
+      font:800 13px/1 "Cairo",system-ui,sans-serif;
+      color:var(--gold-hi);
+      background-image:linear-gradient(180deg,#fff2b8,#e8be6a 55%,#7a4f02);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      white-space:nowrap;
+      text-shadow:0 0 .3vmin rgba(255,255,255,.35),0 .2vmin .1vmin rgba(0,0,0,.55);
+    }
+    .sheet select, .sheet input[type="number"], .sheet .value-box{
+      width: clamp(90px, 26vw, 140px);
+      height: clamp(40px, 7vmin, 54px);
+      color:var(--led-amber);
+      background:linear-gradient(180deg,#11161d,#0b0f15 60%,#090d13);
+      border:1px solid rgba(255,178,0,.4); border-radius:10px; padding:.6vmin 1vmin; /* ✅ تصحيح الخطأ المطبعي */
+      font-family:"Orbitron",system-ui,sans-serif;
+    }
+    .sheet .value-box{display:flex; align-items:center; justify-content:center; font-weight:700;}
+
+    /* ===== Rules ===== */
+    .rules{margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,.08)}
+    .rules h4{margin:0 0 8px 0; font:800 14px/1.2 "Cairo",system-ui,sans-serif; letter-spacing:.3px}
+    .rules ul{padding-left:18px; margin:0}
+    .rules li{margin:4px 0; font:600 12px/1.35 "Cairo",system-ui,sans-serif; opacity:.95}
+
+    /* ===== Toast ===== */
+    .toast{
+      position:fixed; left:50%; transform:translateX(-50%);
+      z-index:10050; padding:.9rem 1.2rem; border-radius:12px;
+      background:rgba(0,0,0,.75); color:#fff; border:1px solid rgba(255,255,255,.15);
+      font:800 clamp(18px,3.6vmin,26px)/1.2 "Cairo", system-ui, sans-serif;
+      box-shadow:0 10px 24px rgba(0,0,0,.4);
+      pointer-events:none;
+    }
+    .toast.bet{ bottom: 14%; font-size: clamp(14px, 3vmin, 20px); }
+
+    /* ===== Audio ===== */
+    .audio-icon{
+      font-size: clamp(20px, 3.6vmin, 24px);
+      width: clamp(40px, 7vmin, 52px); height: clamp(40px, 7vmin, 52px);
+      border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;
+      background: linear-gradient(180deg,#1e252d,#0b0f15);
+      border:1.5px solid var(--hud-stroke);
+      box-shadow: 0 .8vmin 2vmin rgba(0,0,0,.35), inset 0 0 3vmin rgba(255,215,120,.08);
+    }
+    .audio-panel{
+      position:fixed; top: 2vmin; right: 2vmin; width: clamp(220px, 40vmin, 280px);
+      background:#222; border:1px solid #444; border-radius:1.2vmin; padding:1.2vmin; display:none; z-index:9999
+    }
+    .audio-panel h3{margin-bottom:1vmin;text-align:center}
+    .sound-control{display:flex;flex-direction:column;margin-bottom:1.2vmin}
+    .sound-control label{margin-bottom:.6vmin;font-size: clamp(12px, 1.8vmin, 14px);font-weight:bold}
+    .sound-control input[type="range"]{width:100%}
+    .mute-row{display:flex;align-items:center;justify-content:space-between}
+
+    .intro-overlay{position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center;z-index:1000000}
+    .intro-overlay video{width:100vw;height:100vh;object-fit:contain;background:#000}
+
+    @media (max-width: 600px){
+      .spin-row-inner{flex-wrap:wrap; gap:calc(var(--gap) * .8)}
+      #moreBtn{ order: 3; }
+    }
+    @media (min-width: 1200px){
+      :root{ --spin-size: clamp(84px, 10vmin, 130px); --step-size: clamp(56px, 8vmin, 96px); }
+    }
+
+    /* ===== Desktop-only tweaks ===== */
+    @media (min-width: 1024px) and (pointer: fine){
+      :root{ --spin-size: clamp(110px, 9.2vmin, 160px); --step-size: clamp(34px, 3.6vmin, 56px); --gap: 1.4vmin; }
+      .spin-row-inner{ gap: calc(var(--gap) * .85); }
+      #moreBtn, .audio-icon{ width: clamp(36px, 3.2vmin, 46px); height: clamp(36px, 3.2vmin, 46px); font-size: clamp(16px, 2vmin, 20px); }
+      .top-hud{ top: 12px; }
+      .machine-frame{ margin-top: 12px; } /* ✅ بدل 68px */
+    }
+
+    /* ===== ⭐ Special: shake the 4th reel ===== */
+    .reel { will-change: transform; }
+    .reel.shake { animation: reelShake 0.48s ease; }
+    @keyframes reelShake{
+      0%   { transform: translateX(0) rotate(0deg); }
+      20%  { transform: translateX(-0.6vmin) rotate(-0.4deg); }
+      40%  { transform: translateX( 0.6vmin) rotate( 0.4deg); }
+      60%  { transform: translateX(-0.35vmin) rotate(-0.3deg); }
+      80%  { transform: translateX( 0.35vmin) rotate( 0.3deg); }
+      100% { transform: translateX(0) rotate(0deg); }
+    }
+
+    /* ===== تحسين عرض الكمبيوتر فقط ===== */
+  /* ===== تحسين عرض الكمبيوتر فقط ===== */
+/* ===== تحسين عرض الكمبيوتر فقط ===== */
+@media (min-width: 1024px) {
+  .machine-frame {
+    transform: scale(0.8);
+    transform-origin: top center;
+    margin-bottom: -60px; /* يرفع زر SPIN للأعلى */
+  }
+
+  /* ✅ فقط على الكمبيوتر: تعديل مكان صف الأزرار */
+  .spin-row {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: clamp(18px, 2.8vmin, 34px);
+    margin-top: 0;
+    top: auto;
+    z-index: 10015;
+    width: 100%;
+  }
+}
+
+/* ✅ تحسين عرض الموبايل (يظهر كل شيء بوضوح داخل الشاشة) */
+@media (max-width: 1023px) {
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .machine-frame {
+    transform: scale(0.9);          /* ✅ تصغير بسيط لتناسب الارتفاع */
+    transform-origin: top center;
+    margin-top: 12px;
+  }
+
+  .slot-container {
+    max-width: 95vw;                /* ✅ تتناسب مع عرض الموبايل */
+    max-height: 52vh;               /* ✅ لا تتجاوز نصف الشاشة تقريبا */
+  }
+
+  .spin-row {
+    position: relative;
+    bottom: auto;
+    margin-top: 10px;
+    transform: scale(0.9);          /* ✅ تصغير بسيط للأزرار */
+    transform-origin: top center;
+  }
+
+  .top-hud {
+    top: 8px;                       /* ✅ مسافة صغيرة من الأعلى */
+  }
+}
+/* 🎨 ثيم لعبة Aurora Aegis */
+:root {
+  --machine-color: #00b7c2; /* 💎 لون شفق سماوي رائع */
+}
+
+/* الإطار والخلفية */
+.machine-frame,
+.slot-container {
+  background: var(--machine-color) !important;
+  border-color: var(--machine-color) !important;
+  box-shadow:
+    0 0 20px var(--machine-color),
+    inset 0 0 25px var(--machine-color) !important;
+}
+
+/* الفواصل بين الرموز - نفس اللون تمامًا */
+.reel:not(:first-child)::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -0.25vmin;
+  width: 0.5vmin;
+  border-radius: 0.4vmin;
+  background: var(--machine-color);
+  box-shadow:
+    0 0 4px var(--machine-color),
+    inset 0 0 6px var(--machine-color);
+  opacity: 1;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* إزالة أي animation أو تأثير سابق */
+.machine-frame::before,
+.machine-frame::after,
+.slot-container::before,
+.slot-container::after {
+  content: none !important;
+  animation: none !important;
+}
+/* 🎨 ثيم لعبة Aztec */
+:root {
+  --machine-color: #b8860b; /* 🟡 ذهبي زيتوني معتّق */
+}
+
+/* الإطار والخلفية */
+.machine-frame,
+.slot-container {
+  background: var(--machine-color) !important;
+  border-color: var(--machine-color) !important;
+  box-shadow:
+    0 0 20px var(--machine-color),
+    inset 0 0 25px var(--machine-color) !important;
+}
+
+/* الفواصل بين الرموز - نفس اللون بالضبط */
+.reel:not(:first-child)::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -0.25vmin;
+  width: 0.5vmin;
+  border-radius: 0.4vmin;
+  background: var(--machine-color);
+  box-shadow:
+    0 0 4px var(--machine-color),
+    inset 0 0 6px var(--machine-color);
+  opacity: 1;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* إزالة أي animation أو تأثير سابق */
+.machine-frame::before,
+.machine-frame::after,
+.slot-container::before,
+.slot-container::after {
+  content: none !important;
+  animation: none !important;
+}
+/* 🎨 ثيم لعبة Aztec */
+/* 🎨 لون المكنة والفواصل */
+:root {
+  --machine-color: #a04f00; /* 🔧 غيّر هذا الكود اللوني حسب كل لعبة */
+}
+
+/* المكنة نفسها */
+./* 🏺 THE MUMMY – Sand Gold Theme (ثيم مومياء ذهبي رملي) */
+/* 🏆 THE MUMMY – Full Solid Gold Machine */
+/* 🏆 THE MUMMY – Full Solid Gold Machine */
+.machine-frame {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: clamp(18px, 3vmin, 36px);
+  border-radius: 20px;
+  background: #ffcc00 !important; /* ذهبي قوي */
+  border: 6px solid #ffcc00 !important;
+  box-shadow: none !important; /* بدون لمعة أو تدرّج */
+  position: relative;
+  overflow: hidden;
+  margin-top: calc(60px + env(safe-area-inset-top, 0px));
+}
+
+/* 🎰 الجزء الداخلي للمكنة */
+.slot-container {
+  width: var(--slot-w);
+  height: var(--slot-h);
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: #ffcc00 !important; /* نفس الذهبي بالضبط */
+  border: 2px solid #ffcc00 !important;
+  box-shadow: none !important;
+}
+
+/* ✨ الخطوط الفاصلة بين الأعمدة */
+.reel:not(:first-child)::before {
+  background: #ffcc00 !important; /* نفس اللون الكامل */
+  box-shadow: none !important;
+}
+
+/* ✨ الخطوط الفاصلة بين الأعمدة */
+.reel:not(:first-child)::before {
+  background: #ffcc00 !important; /* نفس اللون الكامل */
+  box-shadow: none !important;
+}
+
+
+/* 🎰 الشاشة الداخلية */
+.slot-container {
+  width: var(--slot-w);
+  height: var(--slot-h);
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: #bfa053 !important; /* نفس اللون الكامل */
+  border: 2px solid #bfa053 !important;
+  box-shadow:
+    inset 0 0 10px rgba(191, 160, 83, 0.4),
+    inset 0 0 25px rgba(191, 160, 83, 0.25) !important;
+}
+
+/* 🧱 الفواصل بين الأعمدة */
+.reel:not(:first-child)::before {
+  background: #bfa053 !important;
+  box-shadow:
+    0 0 1vmin rgba(191, 160, 83, 0.4),
+    inset 0 0 0.4vmin rgba(0, 0, 0, 0.2) !important;
+}
+
+
+/* الشاشة الداخلية */
+.slot-container {
+  background: radial-gradient(circle at 50% 50%, var(--machine-color) 10%, #000 90%) !important;
+  border: 2px solid var(--machine-color) !important;
+  box-shadow:
+    inset 0 0 10px var(--machine-color),
+    0 0 20px var(--machine-color) !important;
+}
+
+/* الفواصل بين الرموز */
+.reel:not(:first-child)::before {
+  background: var(--machine-color) !important;
+  box-shadow:
+    0 0 6px var(--machine-color),
+    inset 0 0 6px var(--machine-color) !important;
+}
+
+
+/* الفواصل بين الرموز - نفس اللون بالضبط */
+.reel:not(:first-child)::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -0.25vmin;
+  width: 0.5vmin;
+  border-radius: 0.4vmin;
+  background: var(--machine-color);
+  box-shadow:
+    0 0 4px var(--machine-color),
+    inset 0 0 6px var(--machine-color);
+  opacity: 1;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* إزالة أي animation أو تأثير سابق */
+.machine-frame::before,
+.machine-frame::after,
+.slot-container::before,
+.slot-container::after {
+  content: none !important;
+  animation: none !important;
+}
+
+
+  </style>
+
+  <!-- Supabase JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- HUD -->
+  <div class="top-hud" aria-live="polite">
+    <span class="label">Credits</span>
+    <span id="creditsTop">1000</span>
+    <span id="winBadge" class="win-badge" hidden>+0</span>
+  </div>
+
+  <!-- Intro -->
+  <div id="introOverlay" class="intro-overlay">
+    <video id="introVideo" src="aa.mp4" preload="auto" autoplay muted playsinline webkit-playsinline></video>
+  </div>
+
+  <!-- 👇 العنوان الآن خارج المكنة وبينه وبين HUD مسافة كافية -->
+  <h1 class="machine-title">the mumy</h1>
+
+  <div class="machine-frame">
+    <div class="slot-container">
+      <div class="reels" id="reels"></div>
+    </div>
+  </div>
+
+  <!-- Spin row -->
+  <div class="spin-row">
+    <div class="spin-row-inner">
+      <button id="betMinus" class="step-btn" aria-label="Decrease bet">−</button>
+      <button id="spinBtn" aria-label="Spin"><img src="images/spin.png" alt="Spin" /></button>
+      <button id="betPlus" class="step-btn" aria-label="Increase bet">+</button>
+      <button id="moreBtn" class="step-btn" aria-label="Settings">⋮</button>
+      <div class="audio-icon" id="audioIcon" title="Sound">🔊</div>
+    </div>
+  </div>
+
+  <!-- Settings sheet -->
+  <div id="settingsSheet" class="sheet" aria-hidden="true">
+    <header>
+      <h3>Settings</h3>
+      <button class="close" id="sheetClose" aria-label="Close">×</button>
+    </header>
+
+    <div class="row">
+      <div class="info">
+        <label for="linesCount">Lines:</label>
+        <select id="linesCount">
+          <option value="20">20</option>
+          <option value="10">10</option>
+          <option value="5">5</option>
+          <option value="1" selected>1</option>
+        </select>
+      </div>
+      <div class="info">
+        <label for="betPerLine">Bet/Line:</label>
+       <input type="number" id="betPerLine" value="1" min="1" />
+      </div>
+      <div class="info">
+        <label>Last Win:</label>
+        <div class="value-box" id="lastWin">0</div>
+      </div>
+    </div>
+
+    <!-- Game Rules -->
+    <section class="rules" aria-label="Game Rules">
+      <h4>Game Rules</h4>
+      <ul>
+        <li>Layout: 5 reels × 3 rows, up to 20 lines.</li>
+        <li>Total Bet = Lines × Bet per Line.</li>
+        <li>Visual symbols are decorative; outcome is determined by the line‑chance engine.</li>
+        <li>On any paid spin that wins: your stake for that spin is refunded first, then the win amount is added.</li>
+        <li>Every 10 paid spins: 1 Free Spin. Also 40% chance for a Lucky Bonus on that spin (capped by 3× total bet).</li>
+        <li>Single‑spin cap: win is limited to 3× Total Bet.</li>
+        <li>House balance: dynamic RTP aims around ~70% baseline (auto‑adjusts a bit if your balance is very low/high).</li>
+      </ul>
+    </section>
+  </div>
+
+  <!-- Audio panel -->
+  <div class="audio-panel" id="audioPanel">
+    <h3>Sound Settings</h3>
+    <div class="sound-control">
+      <label>Music</label>
+      <input type="range" min="0" max="1" step="0.01" value="1" data-sound="music" class="volume-slider" />
+      <div class="mute-row"><span>Mute</span><input type="checkbox" data-mute="music" /></div>
+    </div>
+    <div class="sound-control">
+      <label>Spin</label>
+      <input type="range" min="0" max="1" step="0.01" value="1" data-sound="spin" class="volume-slider" />
+      <div class="mute-row"><span>Mute</span><input type="checkbox" data-mute="spin" /></div>
+    </div>
+    <div class="sound-control">
+      <label>Reels</label>
+      <input type="range" min="0" max="1" step="0.01" value="1" data-sound="dd" class="volume-slider" />
+      <div class="mute-row"><span>Mute</span><input type="checkbox" data-mute="dd" /></div>
+    </div>
+    <div class="sound-control">
+      <label>Win</label>
+      <input type="range" min="0" max="1" step="0.01" value="1" data-sound="win" class="volume-slider" />
+      <div class="mute-row"><span>Mute</span><input type="checkbox" data-mute="win" /></div>
+    </div>
+    <div class="sound-control">
+      <label>Bonus</label>
+      <input type="range" min="0" max="1" step="0.01" value="1" data-sound="bonus" />
+      <div class="mute-row"><span>Mute</span><input type="checkbox" data-mute="bonus" /></div>
+    </div>
+  </div>
+
+  <script>
+    /* =================== SUPABASE (كما هو) =================== */
+    const SUPABASE_URL = 'https://pmdjkalkmsrwyoqeybeu.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtZGprYWxrbXNyd3lvcWV5YmV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgyMTEwNDcsImV4cCI6MjA3Mzc4NzA0N30.jEAjMmHIsc9fnce1x5Yor_Vo-UnH_Z1HRN0FQ2YuY5M';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const QS_TOKEN = new URLSearchParams(location.search).get('token');
+
+    async function getAccessToken(){
+      if (QS_TOKEN) return QS_TOKEN;
+      const { data: { session } } = await sb.auth.getSession();
+      return session?.access_token || null;
+    }
+
+    async function apiGetBalance(){
+      const token = await getAccessToken();
+      if(!token) throw new Error('NOT_LOGGED_IN');
+      const { data, error } = await sb.functions.invoke('get-balance', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (error) throw error;
+      return Number(data?.credits ?? 0);
+    }
+
+    async function apiPlaceBet(spinId, lines, betPerLine){
+      const token = await getAccessToken();
+      if (!token) throw new Error('NOT_LOGGED_IN');
+      const totalBet = Number(lines) * Number(betPerLine);
+      const { data, error } = await sb.functions.invoke('place-bet', {
+        body: { spin_id: String(spinId), lines: Number(lines), bet_per_line: Number(betPerLine), total_bet: Number(totalBet) },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (error) throw error;
+      return { balance_after: Number(data?.balance_after) };
+    }
+
+    async function apiSettleSpin(spinId, winAmount, refund){
+      const token = await getAccessToken();
+      if(!token) throw new Error('NOT_LOGGED_IN');
+      const { data, error } = await sb.functions.invoke('settle-spin', {
+        body: { spin_id: String(spinId), win_amount: Number(winAmount ?? 0), refund: Number(refund ?? 0) },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (error) throw error;
+      return { balance_after: Number(data?.balance_after), last_win: Number(data?.last_win || 0) };
+    }
+
+    let backendReady = false;
+    let startCredits = 0;
+
+    async function initBackendAndLoadBalance(){
+      try{
+        creditsTop.textContent = '...';
+        const token = await getAccessToken();
+        if(!token){
+          centerToast('Please sign in first', 'bet', 1600);
+          return;
+        }
+        const serverCredits = await apiGetBalance();
+        credits = Math.max(0, Math.floor(serverCredits));
+        if (!startCredits) startCredits = credits;
+        updateHUD();
+        backendReady = true;
+        spinBtn.disabled = false;
+      }catch(err){
+        console.error('[init] failed:', err);
+        centerToast('Server unavailable', 'bet', 1400);
+        spinBtn.disabled = true;
+      }
+    }
+
+    /* =================== SOUND & GLOBALS =================== */
+    let freeSpins = 0;
+    let isBonusActive = false;
+
+    function pickFrom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+    let spinsSinceSpecial = 0;
+    let nextSpecialAfter  = pickFrom([2,3,4,5]);
+    let specialSpinActive = false;
+    const SPECIAL_GAP_SEC = 2.0;
+
+    const musicSound = new Audio("sounds/music.mp3"); musicSound.loop = true; musicSound.muted = true;
+    const spinSound  = new Audio("sounds/spin.mp3");
+    const ddSound    = new Audio("sounds/dd.mp3"); ddSound.loop = true;
+    const winSound   = new Audio("sounds/win.mp3");
+    const bonusSound = new Audio("sounds/bonus.mp3");
+    const crashSound = new Audio("sounds/crash.mp3"); crashSound.loop = true;
+    const tickSound  = new Audio("sounds/tick.mp3");
+    const soundsMap = { music:musicSound, spin:spinSound, dd:ddSound, win:winSound, bonus:bonusSound, crash:crashSound };
+
+    window.addEventListener("load", () => {
+      musicSound.play().catch(() => {
+        document.addEventListener("click", function onceClick(){
+          musicSound.play().catch(()=>{});
+          document.removeEventListener("click", onceClick);
+        });
+      });
+    });
+
+    /* Audio Panel */
+    (function setupAudioPanel(){
+      const audioIcon=document.getElementById("audioIcon");
+      const audioPanel=document.getElementById("audioPanel");
+      let open=false;
+      function show(){audioPanel.style.display="block";open=true;}
+      function hide(){audioPanel.style.display="none";open=false;}
+      audioIcon.addEventListener("click",(e)=>{e.stopPropagation();open?hide():show();});
+      document.addEventListener("click",(e)=>{ if(!open) return; if(!audioPanel.contains(e.target) && e.target!==audioIcon) hide();});
+      audioPanel.addEventListener("click",(e)=>e.stopPropagation());
+      document.addEventListener("keydown",(e)=>{if(e.key==="Escape" && open) hide();});
+      document.querySelectorAll(".volume-slider").forEach(sl=>{
+        sl.addEventListener("input",(e)=>{
+          const k=e.target.dataset.sound; const v=parseFloat(e.target.value);
+          if(k==="dd"){ ddSound.volume = isFinite(v)?v:1; tickSound.volume = isFinite(v)?v:1; }
+          else if(soundsMap[k]){ soundsMap[k].volume = isFinite(v)?v:1; }
+        });
+      });
+      document.querySelectorAll("input[type='checkbox'][data-mute]").forEach(ch=>{
+
+        ch.addEventListener("change",(e)=>{
+          const k=e.target.dataset.mute; const muted=!!e.target.checked;
+          if(k==="dd"){ ddSound.muted=muted; tickSound.muted=muted; }
+          else if(soundsMap[k]){ soundsMap[k].muted=muted; }
+        });
+      });
+    })();
+
+    /* Intro Video */
+    (function setupIntroVideo(){
+      const overlay=document.getElementById("introOverlay");
+      const video=document.getElementById("introVideo");
+      if(!overlay||!video) return;
+      video.muted=true; video.setAttribute('playsinline',''); video.setAttribute('webkit-playsinline',''); video.autoplay=true;
+
+      window.addEventListener("load",()=>{
+        try{ musicSound.pause(); }catch(e){}
+        const p=video.play();
+        if(p && typeof p.catch==="function"){
+          p.catch(()=>{
+            const tap=()=>{ video.play().catch(()=>{}); overlay.removeEventListener("click", tap); };
+            overlay.addEventListener("click", tap);
+          });
+        }
+      });
+      video.addEventListener("ended",()=>{
+        overlay.style.display="none";
+        try{ musicSound.muted=false; musicSound.currentTime=0; musicSound.play().catch(()=>{}); }catch(e){}
+      },{once:true});
+    })();
+
+    /* ===== Utils ===== */
+    function toInt(v,d){const n=parseInt(v,10);return Number.isFinite(n)?n:d;}
+    function clamp(n,min,max){return Math.min(max,Math.max(min,n));}
+    function fixNumber(n,def=0){n=Number(n);return Number.isFinite(n)?n:def;}
+    function getCssNumber(name){ return parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name)) || 0; }
+    function rand(){ return Math.random(); }
+    function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+
+    /* ===== الرموز (ديكور) ===== */
+    let s_aRandSymbols = [];
+    for (let i = 0; i < 1; i++) s_aRandSymbols.push(9);
+    for (let i = 0; i < 2; i++) s_aRandSymbols.push(8);
+    for (let i = 0; i < 3; i++) s_aRandSymbols.push(7);
+    for (let i = 0; i < 4; i++) s_aRandSymbols.push(6);
+    for (let i = 0; i < 5; i++) s_aRandSymbols.push(5);
+    for (let i = 0; i < 6; i++) s_aRandSymbols.push(4);
+    for (let i = 0; i < 7; i++) s_aRandSymbols.push(3);
+    for (let i = 0; i < 8; i++) { s_aRandSymbols.push(2); s_aRandSymbols.push(1); s_aRandSymbols.push(0); }
+
+    function getSymbolImageById(id){
+      if(id===9) return "images/wild.png";
+      const map = {
+        0:"images/d1.png", 1:"images/d2.png", 2:"images/d3.png", 3:"images/d4.png",
+        4:"images/d5.png", 5:"images/d6.png", 6:"images/d7.png", 7:"images/d8.png", 8:"images/d8.png"
+      };
+      return map[id] || "images/d1.png";
+    }
+    function getSymbolBackground(symUrl){return `url("${symUrl}"), url("images/d1.png")`; }
+    function pickSymbolIdByWeight(){ const idx = Math.floor(Math.random() * s_aRandSymbols.length); return s_aRandSymbols[idx]; }
+    function makeSymbolObj(id){ return { id, name:String(id), url:getSymbolImageById(id) }; }
+
+    /* ===== PAYTABLE (ديكور فقط) ===== */
+    const PAYTABLE_VALUES = [
+      [0, 5, 20, 100],
+      [0, 10, 40, 200],
+      [0, 15, 60, 250],
+      [0, 20, 80, 300],
+      [0, 25, 100, 400],
+      [0, 30, 120, 500],
+      [0, 40, 150, 600],
+      [0, 50, 200, 800],
+      [0, 60, 300, 900],
+      [0, 70, 400, 1000]
+    ];
+
+    const MAX_WIN_MULTIPLIER=3;
+
+    /* ===== UI refs ===== */
+    const linesCountSelect = document.getElementById("linesCount");
+    const betPerLineInput  = document.getElementById("betPerLine");
+    const creditsTop       = document.getElementById("creditsTop");
+    const lastWinSpan      = document.getElementById("lastWin");
+    const spinBtn          = document.getElementById("spinBtn");
+    const betPlusBtn       = document.getElementById("betPlus");
+    const betMinusBtn      = document.getElementById("betMinus");
+    const moreBtn          = document.getElementById("moreBtn");
+    const settingsSheet    = document.getElementById("settingsSheet");
+    const sheetClose       = document.getElementById("sheetClose");
+    const winBadge         = document.getElementById("winBadge");
+
+    const reelsCount=5, rowsCount=3;
+
+    /* 20 خطوط (للديكور / الهايلايت فقط) */
+    const payLines=[
+      [0,0,0,0,0], [1,1,1,1,1], [2,2,2,2,2], [0,1,2,1,0], [2,1,0,1,2],
+      [0,0,1,0,0], [2,2,1,2,2], [1,0,0,0,1], [1,2,2,2,1], [0,1,1,1,2],
+      [2,1,1,1,0], [0,2,1,2,0], [2,0,1,0,2], [1,0,1,2,1], [1,2,1,0,1],
+      [0,1,0,1,0], [2,1,2,1,2], [0,2,2,2,0], [2,0,0,0,2], [0,2,0,2,0]
+    ];
+
+    function getActivePayLinesCount(){
+      const raw = toInt(linesCountSelect.value,1);
+      const allowed=[1,5,10,20];
+      const n = allowed.includes(raw)?raw:1;
+      if(String(n)!==linesCountSelect.value) linesCountSelect.value=String(n);
+      return n;
+    }
+    function getBetPerLine(){
+      let n = toInt(betPerLineInput.value,1);
+      const allowedMax = Math.max(1, Math.floor(100 / getActivePayLinesCount()));
+      if(!Number.isFinite(n) || n<1) n=1;
+      if(n>allowedMax) n=allowedMax;
+      if(String(n)!==betPerLineInput.value) betPerLineInput.value=String(n);
+      return n;
+    }
+    betPerLineInput.addEventListener('input', ()=>{
+      const allowedMax = Math.max(1, Math.floor(100 / getActivePayLinesCount()));
+      const v = Math.max(1, Math.min(allowedMax, toInt(betPerLineInput.value,1)));
+      betPerLineInput.value = String(v);
+      showBetToast();
+    });
+    betPerLineInput.addEventListener('blur',  ()=>{
+      const allowedMax = Math.max(1, Math.floor(100 / getActivePayLinesCount()));
+      const v = Math.max(1, Math.min(allowedMax, toInt(betPerLineInput.value,1)));
+      betPerLineInput.value = String(v);
+      showBetToast();
+    });
+    linesCountSelect.addEventListener('change',()=>{
+      linesCountSelect.value=String(getActivePayLinesCount());
+      betPerLineInput.value = String(getBetPerLine());
+      showBetToast();
+    });
+
+    let credits=1000, lastWin=0, isSpinning=false;
+
+    function centerToast(text, cls='bet', ms=1200){
+      const t=document.createElement('div');
+      t.className=`toast ${cls}`;
+      t.textContent=text;
+      document.body.appendChild(t);
+      setTimeout(()=>{ if(t&&t.parentNode) t.parentNode.removeChild(t); }, ms);
+    }
+    function totalBetNow(){ return getActivePayLinesCount() * getBetPerLine(); }
+    function showBetToast(){ centerToast(`Bet / Spin: ${totalBetNow()}`, 'bet', 1200); }
+
+    function animateNumber(el, from, to, ms=800){
+      const start=performance.now();
+      function step(now){
+        const t=Math.min(1, (now-start)/ms);
+        const val=Math.floor(from + (to-from)*t);
+        el.textContent = String(val);
+        if(t<1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+    function showWinBadge(amount){
+      if(typeof amount === 'number') amount = `+${amount}`;
+      winBadge.textContent = amount;
+      winBadge.hidden = false;
+      winBadge.classList.remove('show'); void winBadge.offsetWidth; winBadge.classList.add('show');
+      setTimeout(()=>{ winBadge.hidden = true; }, 1600);
+      creditsTop.classList.remove('credits-pulse'); void creditsTop.offsetWidth; creditsTop.classList.add('credits-pulse');
+    }
+    function updateHUD(){
+      credits=Math.max(0,Math.floor(fixNumber(credits,0)));
+      lastWin=Math.max(0,Math.floor(fixNumber(lastWin,0)));
+      creditsTop.textContent = String(credits);
+      lastWinSpan.textContent = String(lastWin);
+    }
+
+    /* Reels build */
+    const BASE_TRAVEL_TILES = 9;
+    function createReelsLayout(){
+      const reelsWrapper=document.getElementById("reels"); reelsWrapper.innerHTML="";
+      for(let c=0;c<reelsCount;c++){const reel=document.createElement("div");reel.className="reel";reelsWrapper.appendChild(reel);}
+    }
+    function getCssNumberProp(name){ return parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name)) || 0; }
+    function TILE(){ return getCssNumberProp('--tile'); }
+    function buildReelSymbolsArray(reelIndex, headCountOverride=null){
+      const arr=[];
+      const head = (headCountOverride && headCountOverride>12) ? Math.floor(headCountOverride) : 12;
+      for(let i=0;i<head;i++) arr.push(makeSymbolObj(pickSymbolIdByWeight()));
+      for(let r=0;r<rowsCount;r++) arr.push(spinFinalResult[r][reelIndex]);
+      const tail=10;
+      for(let j=0;j<tail;j++) arr.push(makeSymbolObj(pickSymbolIdByWeight()));
+      return arr;
+    }
+    function renderReelsStatic(){
+      const reelDivs=document.querySelectorAll(".reel");
+      for(let c=0;c<reelsCount;c++){
+        const inner=document.createElement("div"); inner.className="reel-inner";
+        const reelSymbols=buildReelSymbolsArray(c);
+        inner.style.height=(reelSymbols.length * TILE())+"px";
+        reelSymbols.forEach((sym,idx)=>{
+          const d=document.createElement("div"); d.className="symbol"; d.style.top=(idx * TILE())+"px";
+          d.style.left = "0"; d.style.transform = "none";
+          const img=document.createElement("div"); img.className="symbol-img"; img.style.backgroundImage=getSymbolBackground(sym.url);
+          d.appendChild(img); inner.appendChild(d);
+        });
+        reelDivs[c].appendChild(inner);
+      }
+    }
+
+    const reelDurations=[0.60,0.70,0.80,0.90,1.00];
+    let spinFinalResult=[];
+
+    function generateSpinResult(){
+      const res=[[],[],[]];
+      for(let r=0;r<rowsCount;r++){
+        for(let c=0;c<reelsCount;c++){
+          res[r][c]=makeSymbolObj(pickSymbolIdByWeight());
+        }
+      }
+      return res;
+    }
+
+    /* ===== محرك الفوز الذكي ===== */
+    function expectedFactor(weights, factors){
+      let s=0; for(let i=0;i<weights.length;i++) s += weights[i]*factors[i];
+      return s;
+    }
+    function weightedPick(weights){
+      const total=weights.reduce((a,b)=>a+b,0);
+      let r=Math.random()*total;
+      for(let i=0;i<weights.length;i++){
+        if(r<weights[i]) return i;
+        r-=weights[i];
+      }
+      return weights.length-1;
+    }
+    function currentTargetRTPBase(){
+      let t = 0.70;
+      if (startCredits>0){
+        const ratio = credits/Math.max(1,startCredits);
+        if (ratio <= 0.40) t = 0.90;
+        else if (ratio <= 0.70) t = 0.80;
+        else if (ratio >= 1.30) t = 0.62;
+        else if (ratio >= 1.15) t = 0.66;
+      }
+      return t;
+    }
+    function solvePlineForRTP(target, lines, E){
+      let lo=0, hi=0.9;
+      const f=(p)=> (1 - Math.pow(1 - p, lines)) + p*E;
+      for(let i=0;i<36;i++){
+        const mid=(lo+hi)/2, val=f(mid);
+        if(val<target) lo=mid; else hi=mid;
+      }
+      return Math.max(0, Math.min(0.9, hi));
+    }
+
+    function evaluateWin(spinResult, isPaidSpin){
+      const linesActive = getActivePayLinesCount();
+      const betVal = getBetPerLine();
+      const totalBet = linesActive * betVal;
+
+      const factors = [1, 2, 3, 5, 8];
+      const weights = [0.60, 0.25, 0.10, 0.04, 0.01];
+      const E = expectedFactor(weights, factors);
+
+      let target = currentTargetRTPBase();
+      const pLine = solvePlineForRTP(target, linesActive, E);
+
+      let winAmount = 0;
+      for(let i=0;i<linesActive;i++){
+        if(Math.random() < pLine){
+          const k=weightedPick(weights);
+          winAmount += factors[k]*betVal;
+        }
+      }
+
+      const cap = MAX_WIN_MULTIPLIER * totalBet;
+      if (isPaidSpin && winAmount > cap) winAmount = cap;
+
+      return Math.floor(winAmount);
+    }
+
+    /* ===== تدفق اللفة مع Supabase ===== */
+    let lastDeductedBet = 0;
+    let spentThisSpin   = 0;
+    let pendingSpinId   = null;
+    let betError        = false;
+    let paidSpinCounter = 0;
+
+    function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
+    async function ensureBetApplied(timeoutMs=1200){
+      const start = performance.now();
+      while (pendingSpinId && lastDeductedBet===0 && (performance.now()-start)<timeoutMs){
+        await wait(60);
+      }
+    }
+
+    async function finalizeSpin(){
+      ddSound.pause(); ddSound.currentTime=0;
+
+      const prevCredits = credits;
+      const totalBet    = lastDeductedBet;
+      const isPaidSpin  = lastDeductedBet > 0;
+
+      if (isPaidSpin && betError){
+        isSpinning=false;
+        betError=false; pendingSpinId=null; lastDeductedBet=0; spentThisSpin=0;
+        centerToast('Bet failed', 'bet', 1200);
+        spinBtn.disabled=false;
+        return;
+      }
+
+      if (isPaidSpin) paidSpinCounter++;
+
+      let winAmount = Math.max(0, Math.floor(fixNumber(evaluateWin(spinFinalResult, isPaidSpin),0)));
+
+      const isMilestone = isPaidSpin && (paidSpinCounter % 10 === 0);
+      if (isMilestone && Math.random() < 0.40) {
+        const bonusAdd = Math.floor(totalBet * 5);
+        winAmount += bonusAdd;
+        try{ winSound.currentTime=0; winSound.play().catch(()=>{});}catch(e){}
+        centerToast("🎁 Lucky Bonus!", "bet", 1200);
+      }
+
+      if (isMilestone) {
+        isBonusActive = true;
+        freeSpins = (freeSpins || 0) + 1;
+        try{ bonusSound.currentTime=0; bonusSound.play().catch(()=>{});}catch(e){}
+        centerToast("🎁 Free Spin!", "bet", 1200);
+      }
+
+      if (isPaidSpin){
+        const cap = MAX_WIN_MULTIPLIER * totalBet;
+        if (winAmount > cap) winAmount = cap;
+      }
+
+      if (isPaidSpin && pendingSpinId && lastDeductedBet===0){
+        await ensureBetApplied(1200);
+      }
+
+      const refund = (isPaidSpin && winAmount > 0) ? totalBet : 0;
+
+      try{
+        if (isPaidSpin && pendingSpinId){
+          const settle = await apiSettleSpin(pendingSpinId, winAmount, refund);
+          credits = settle.balance_after;
+          lastWin = settle.last_win || winAmount;
+          animateNumber(creditsTop, prevCredits, credits, 850);
+          if(lastWin>0) showWinBadge(lastWin);
+        }else{
+          if (winAmount>0){
+            credits += winAmount;
+            animateNumber(creditsTop, prevCredits, credits, 850);
+            showWinBadge(winAmount);
+          }else{
+            creditsTop.textContent = String(credits);
+          }
+          lastWin = winAmount;
+        }
+      }catch(err){
+        console.error('[settle-spin] error:', err);
+        centerToast('Settle failed', 'bet', 1400);
+        try{ credits = await apiGetBalance(); updateHUD(); }catch(e){}
+      }
+
+      isSpinning=false;
+      spentThisSpin = 0;
+      lastDeductedBet = 0;
+      pendingSpinId = null;
+
+      if(isBonusActive){
+        if(freeSpins>0){ setTimeout(()=>{freeSpins--; doSpin();},300); }
+        else{
+          isBonusActive=false; crashSound.pause(); crashSound.currentTime=0; musicSound.currentTime=0; musicSound.play().catch(()=>{});
+          spinBtn.disabled=false;
+        }
+      }else{
+        spinBtn.disabled=false;
+      }
+      lastWinSpan.textContent = String(lastWin);
+    }
+
+    async function doSpin() {
+      if (isSpinning) return;
+      if (!backendReady) {
+        centerToast('Please sign in', 'bet', 1200);
+        return;
+      }
+
+      spinsSinceSpecial++;
+      if (spinsSinceSpecial >= nextSpecialAfter) {
+        specialSpinActive = true;
+        spinsSinceSpecial = 0;
+        nextSpecialAfter = pickFrom([2, 3, 4, 5]);
+      } else {
+        specialSpinActive = false;
+      }
+
+      credits=fixNumber(credits,0);
+      spentThisSpin   = 0;
+      lastDeductedBet = 0;
+      betError        = false;
+
+      const lines = getActivePayLinesCount();
+      const betVal = getBetPerLine();
+      const totalBet = lines * betVal;
+
+      const isPaidSpin = !(isBonusActive && freeSpins > 0);
+
+      spinFinalResult = generateSpinResult();
+
+      isSpinning = true;
+      spinBtn.disabled = true;
+      try { spinSound.currentTime = 0; spinSound.play().catch(() => {}); } catch (e) {}
+      displaySpinWithAnimation();
+
+      if (isPaidSpin) {
+        if (!Number.isFinite(totalBet) || totalBet <= 0) return;
+        try {
+          pendingSpinId = crypto.randomUUID();
+        } catch (_) {
+          pendingSpinId = String(Date.now()) + '_' + Math.random().toString(16).slice(2);
+        }
+
+        apiPlaceBet(pendingSpinId, lines, betVal)
+          .then((res) => {
+            const prev = credits;
+            credits = res.balance_after;
+            animateNumber(creditsTop, prev, credits, 300);
+            lastDeductedBet = totalBet;
+            spentThisSpin   = totalBet;
+          })
+          .catch((err) => {
+            console.error('[place-bet] error:', err);
+            betError = true;
+          });
+      }
+    }
+
+    spinBtn.addEventListener("click", ()=>{ if(isBonusActive&&freeSpins>0) return; doSpin(); });
+
+    /* ===== عرض الرسوم ===== */
+    function displaySpinWithAnimation(){
+      const reelDivs=document.querySelectorAll(".reel"); let finished=0;
+
+      ddSound.currentTime=0; ddSound.play().catch(()=>{});
+
+      for(let c=0;c<reelsCount;c++){
+        const inner=document.createElement("div"); inner.className="reel-inner";
+
+        let useWA = false;
+        let startTiles = null;
+        let headCountOverride = null;
+
+        if (specialSpinActive && c === 4){
+          const tilePxPerSecFirst = BASE_TRAVEL_TILES / reelDurations[0];
+          const finishAfter = (reelDurations[3] + SPECIAL_GAP_SEC);
+          const requiredTiles = Math.ceil(tilePxPerSecFirst * finishAfter);
+          startTiles = 12 + requiredTiles;
+          headCountOverride = startTiles + 3;
+          useWA = true;
+        }
+
+        const arr=buildReelSymbolsArray(c, headCountOverride);
+        inner.style.height=(arr.length * TILE())+"px";
+        arr.forEach((sym,idx)=>{
+          const d=document.createElement("div"); d.className="symbol"; d.style.top=(idx * TILE())+"px";
+          d.style.left="0"; d.style.transform="none";
+          const img=document.createElement("div"); img.className="symbol-img"; img.style.backgroundImage=getSymbolBackground(sym.url);
+          d.appendChild(img); inner.appendChild(d);
+        });
+
+        const old=reelDivs[c].querySelector(".reel-inner"); reelDivs[c].appendChild(inner); if(old) reelDivs[c].removeChild(old);
+
+        if (useWA && typeof inner.animate === 'function'){
+          const tilePx = TILE();
+          inner.style.animation = 'none';
+          inner.style.transform = `translateY(${(-startTiles*tilePx)}px)`;
+
+          function mapTilesToPx(oldTiles){
+            const spanOld = 9;
+            const spanNew = (startTiles - 12);
+            const delta = (oldTiles + 21);
+            const mapped = -startTiles + (delta * spanNew / spanOld);
+            return mapped * tilePx;
+          }
+          const finishAfter = (reelDurations[3] + SPECIAL_GAP_SEC);
+          const kf = [
+            { offset: 0.00, transform: `translateY(${mapTilesToPx(-21)}px)` },
+            { offset: 0.10, transform: `translateY(${mapTilesToPx(-19)}px)` },
+            { offset: 0.70, transform: `translateY(${mapTilesToPx(-13.5)}px)` },
+            { offset: 0.88, transform: `translateY(${mapTilesToPx(-12.25)}px)` },
+            { offset: 0.94, transform: `translateY(${mapTilesToPx(-11.8)}px)` },
+            { offset: 1.00, transform: `translateY(${mapTilesToPx(-12)}px)` }
+          ];
+          const anim = inner.animate(kf, { duration: finishAfter * 1000, easing: 'linear', fill: 'forwards' });
+
+          anim.onfinish = ()=>{
+            try{ tickSound.currentTime = 0; tickSound.play().catch(()=>{}); }catch(e){}
+            finished++;
+            if(finished===reelsCount) finalizeSpin();
+          };
+
+        } else {
+          const dur = reelDurations[c];
+          inner.style.animation=`spinDown ${dur}s forwards linear`;
+
+          if (specialSpinActive && c===3){
+            inner.addEventListener("animationend", ()=>{
+              const reelEl = reelDivs[c];
+              if (reelEl){
+                reelEl.classList.remove('shake'); void reelEl.offsetWidth;
+                reelEl.classList.add('shake');
+                setTimeout(()=>reelEl.classList.remove('shake'), 520);
+              }
+            }, {once:true});
+          }
+
+          inner.addEventListener("animationend", ()=>{
+            try{ tickSound.currentTime = 0; tickSound.play().catch(()=>{}); }catch(e){}
+            finished++;
+            if(finished===reelsCount) finalizeSpin();
+          }, {once:true});
+        }
+      }
+    }
+
+    /* Responsive */
+    let pendingResize = false;
+    let resizeTimer = null;
+    function setTile(px){ document.documentElement.style.setProperty('--tile', Math.max(40, px) + 'px'); }
+    function fitToViewport(force=false){
+      if (isSpinning && !force) { pendingResize = true; return; }
+      const vw = Math.max(1, window.innerWidth || document.documentElement.clientWidth || 0);
+      const vh = Math.max(1, (window.visualViewport ? visualViewport.height : window.innerHeight) || window.innerHeight);
+      const side = Math.max(8, vw * 0.04);
+      const maxTileByW = (vw - side*2) / 5;
+      setTile(maxTileByW);
+      const spinRow = document.querySelector('.spin-row');
+      const spinH = spinRow ? spinRow.getBoundingClientRect().height : 0;
+      const vMargin = Math.max(12, vh * 0.03);
+      const maxTileByH = (vh - spinH - vMargin*2 - (48 + 10)) / 3;
+      const tile = Math.min(maxTileByW, maxTileByH);
+      setTile(tile);
+      if(!isSpinning){
+        createReelsLayout();
+        renderReelsStatic();
+      }
+    }
+    function scheduleFit(){
+      if(isSpinning){ pendingResize = true; return; }
+      if(resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(()=>fitToViewport(true), 400);
+    }
+
+    window.addEventListener('load', async ()=>{
+      createReelsLayout();
+      spinFinalResult = generateSpinResult();
+      renderReelsStatic();
+      await initBackendAndLoadBalance();
+      fitToViewport();
+
+      linesCountSelect.value = "1";              // ← ضمان البدء بخط 1
+      betPerLineInput.value  = String(getBetPerLine()); // مزامنة الحد الأقصى للـ Bet
+    });
+
+    window.addEventListener('resize', scheduleFit);
+    window.addEventListener('orientationchange', scheduleFit);
+    if(window.visualViewport) visualViewport.addEventListener('resize', scheduleFit);
+
+    function adjustBet(delta){
+      const cur = getBetPerLine();
+      const allowedMax = Math.max(1, Math.floor(100 / getActivePayLinesCount()));
+      const next = Math.max(1, Math.min(allowedMax, cur + delta));
+      betPerLineInput.value = String(next);
+      showBetToast();
+    }
+    betPlusBtn.addEventListener('click', ()=> adjustBet(+1));
+    betMinusBtn.addEventListener('click', ()=> adjustBet(-1));
+
+    function closeSheet(){ settingsSheet.classList.remove('open'); settingsSheet.setAttribute('aria-hidden','true'); }
+    moreBtn.addEventListener('click', (e)=>{ e.stopPropagation(); settingsSheet.classList.toggle('open'); });
+    sheetClose.addEventListener('click', closeSheet);
+    document.addEventListener('click', (e)=>{ if(settingsSheet.classList.contains('open') && !settingsSheet.contains(e.target) && e.target!==moreBtn) closeSheet(); });
+  </script>
+</body>
+</html>
